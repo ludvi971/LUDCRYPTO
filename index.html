@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Crypto Courbe + Horloge + Prix Live</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #00FF00;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .clock {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #00FF00;
+      z-index: 100;
+    }
+    .content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    .crypto-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+    .crypto-name {
+      font-size: 3em;
+      margin-bottom: 10px;
+    }
+    .crypto-price {
+      font-size: 4em;
+      margin-bottom: 20px;
+    }
+    img.chart {
+      max-width: 90vw;
+      max-height: 50vh;
+      border: 2px solid #00FF00;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #00FF00;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="clock" id="clock">00:00:00</div>
+  <div class="content">
+    <div id="btc" class="crypto-container">
+      <div class="crypto-name">💰 Bitcoin (BTC)</div>
+      <div class="crypto-price" id="btc-price">Chargement...</div>
+      <img id="btc-chart" class="chart" src="" alt="BTC chart">
+    </div>
+
+    <div id="eth" class="crypto-container">
+      <div class="crypto-name">💎 Ethereum (ETH)</div>
+      <div class="crypto-price" id="eth-price">Chargement...</div>
+      <img id="eth-chart" class="chart" src="" alt="ETH chart">
+    </div>
+
+    <div id="sol" class="crypto-container">
+      <div class="crypto-name">⚡ Solana (SOL)</div>
+      <div class="crypto-price" id="sol-price">Chargement...</div>
+      <img id="sol-chart" class="chart" src="" alt="SOL chart">
+    </div>
+  </div>
+
+  <script>
+    const cryptos = [
+      {
+        id: 'bitcoin',
+        code: 'btc',
+        label: 'BTC',
+        baseData: [66700, 66800, 67000, 67400, 67600]
+      },
+      {
+        id: 'ethereum',
+        code: 'eth',
+        label: 'ETH',
+        baseData: [3500, 3540, 3570, 3600, 3630]
+      },
+      {
+        id: 'solana',
+        code: 'sol',
+        label: 'SOL',
+        baseData: [143, 145, 146, 148, 150]
+      }
+    ];
+
+    let current = 0;
+
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
+
+    async function updatePricesAndCharts() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd');
+        const data = await res.json();
+
+        cryptos.forEach(crypto => {
+          const price = data[crypto.id].usd;
+          document.getElementById(`${crypto.code}-price`).innerText = `$${price.toLocaleString()}`;
+
+          const updatedData = [...crypto.baseData];
+          updatedData[updatedData.length - 1] = price;
+
+          const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
+            type: 'line',
+            data: {
+              labels: ['2024-06-10', '2024-06-11', '2024-06-12', '2024-06-13', '2024-06-14'],
+              datasets: [{
+                label: '',
+                data: updatedData,
+                borderColor: '#00FF00',
+                backgroundColor: 'transparent',
+                fill: false,
+                pointRadius: 2
+              }]
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { ticks: { color: '#ccc' } },
+                x: { ticks: { color: '#ccc' } }
+              }
+            }
+          }))}`;
+
+          document.getElementById(`${crypto.code}-chart`).src = chartUrl;
+        });
+      } catch (err) {
+        console.error('Erreur API CoinGecko:', err);
+      }
+    }
+
+    function rotateCrypto() {
+      cryptos.forEach((crypto, index) => {
+        document.getElementById(crypto.code).style.display = index === current ? 'flex' : 'none';
+      });
+      current = (current + 1) % cryptos.length;
+    }
+
+    updateClock();
+    updatePricesAndCharts();
+    rotateCrypto();
+    setInterval(updateClock, 1000);
+    setInterval(updatePricesAndCharts, 30000);
+    setInterval(rotateCrypto, 10000);
+  </script>
+</body>
+</html>
